@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "online-tic-tac-toe"
+version = "0.1.0"
+description = "An online tic-tac-toe project."
+requires-python = ">=3.10"
+dependencies = [
+    "websockets",
+]
+
+[project.scripts]
+tic-tac-toe-server = "online_tic_tac_toe.server:main"
+tic-tac-toe-client = "online_tic_tac_toe.client:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
