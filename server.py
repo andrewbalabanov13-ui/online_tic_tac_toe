@@ -1,12 +1,17 @@
 import asyncio
 import websockets
 import uuid
+import random
 
-all_games = []
+new_positions = ()
+event = asyncio.Event()
 connected_clients = []
-
+player_turn = -1
+world = [['e'] * 10]* 10
 class Game():
-    pass
+    def __init__(self):
+        self.board = [['e'] * 10]* 10
+    
 
 
 
@@ -35,35 +40,144 @@ def change_to_readable_format(msg):
     return_list.append(append_str)
     return return_list
 
+def check_if_player_won(player_type):
+    for row in range(len(world)):
+        for col in range(len(row)):
+            try:
+                if (world[row][col] == player_type and
+                    world[row][col + 1] == player_type and
+                    world[row][col + 2] == player_type and
+                    world[row][col + 3] == player_type and
+                    world[row][col + 4] == player_type
+                ):
+                    return True
+            
+            except:
+                pass
+                
+            try:
+                if (world[row][col] == player_type and
+                    world[row + 1][col] == player_type and
+                    world[row + 2][col] == player_type and
+                    world[row + 3][col] == player_type and
+                    world[row + 4][col] == player_type
+                ):
+                    return True      
 
+            except:
+                pass
+            
+            try:
+                if (world[row][col] == player_type and
+                    world[row + 1][col + 1] == player_type and
+                    world[row + 2][col + 2] == player_type and
+                    world[row + 3][col + 3] == player_type and
+                    world[row + 4][col + 4] == player_type
+            ):
+                    return True
+            
+            except: 
+                pass
+
+            try:
+                if (world[row][col] == player_type and
+                    world[row - 1][col + 1] == player_type and
+                    world[row - 2][col + 2] == player_type and
+                    world[row - 3][col + 3] == player_type and
+                    world[row - 4][col + 4] == player_type
+                ):
+                    return True
+            
+            except:
+                pass
+    return False
 
 async def handler(connection):
     my_id =  random.randint(0,2147483647)
-    connected_clients[my_id]=connection
-    type_player = -1
     game_playing = False
-    own_queded_message = False
-    in_queue = False
+    skip_first_lines = False
+    player_type = 0
     try:
+        message = await connection.recv()
+        readable_message = change_to_readable_format(message)   
+        if readable_message[0] == "start_client":
+            player = Player(my_id,readable_message[1],connection)
+            connected_clients.append(player)
+            print("player_connected_into_queue")
+
+        if len(connected_clients) == 1:
+            await event.wait()
+        elif len(connected_clients) == 2:
+            player_type = 1
+            event.set()
+ #           await connected_clients[player_type].player_connection.send(f"oppenents name is{connected_clients[player_type - 1].player_name}")
+ #           await connected_clients[player_type - 1].player_connection.send(f"oppenents name is{connected_clients[player_type].player_name}")
+
+        await connection.send(f"opponent|{connected_clients[player_type - 1].player_name}")
+        if player_type == 0:
+            await event.wait()
+        
+        if player_type == 1:
+            if random.randint(1-2) == 1:
+                player_turn = 0
+                skip_first_lines = True
+            else:
+                player_turn = 1
+                connection.send("start_game")
+            event.set()
+        
+        if readable_message == "start_game":
+            player_turn = 1
+            skip_first_lines = True
+
         while True:
-            message = await connection.recv()
-            readable_message = change_to_readable_format(message)
-            if readable_message[0] == "start_client":
-                player = Player(my_id,readable_message[1],connection)
-                connected_clients.append(player)
-            connection.send()
+            if skip_first_lines == False:
+                await event.wait()
+
+            skip_first_lines = False
+
+            if player_turn == player_type:
+                message_turn = await connection.recv()
+                readable_message_turn = change_to_readable_format(message_turn)
+                x = int(readable_message_turn[1])
+                y = int(readable_message_turn[2])
+
+                if x < 0 or x > 20 or y < 0 or y > 20:
+                    connection.send("resend_message")
                     
-                
-                
-            
-            
-            
-    except:
-        pass
+                world[y][x] = str(player_turn)
+
+                if world[y][x] != 'e':
+                    skip_first_lines = True
+                    connection.send("resend_message")
+                    continue
+    
+                if check_if_player_won(player_type):
+                    await connected_clients[player_type].player_connection.send(f"player_won|{player_type}")
+                    await connected_clients[player_type - 1].player_connection.send(f"player_won|{player_type}")   
+
+                await connected_clients[player_type].player_connection.send(f"update|{x}|{y}|{player_turn}")
+                await connected_clients[player_type - 1].player_connection.send(f"update|{x}|{y}|{player_turn}")
+
+                if player_turn == 0:
+                    player_turn = 1
+                else:
+                    player_turn = 0
+
+                event.set()
 
 
-    # finnaly:
-    #     pass
+
+                                     
+                
+    except (ConnectionResetError, BrokenPipeError, OSError) as error:
+        print("connection lost")
+    
+    except Exception as error:
+        print(f"connection lost, reason: {error}")
+
+    finally:
+        print("smt happened idk what")
 
     
 
