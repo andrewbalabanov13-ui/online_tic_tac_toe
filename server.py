@@ -112,8 +112,8 @@ async def handler(connection):
         elif len(connected_clients) == 2:
             player_type = 1
             event.set()
-            await connected_clients[player_type].player_connection.send(f"oppenents_name|{connected_clients[player_type - 1].player_name}")
-            await connected_clients[player_type - 1].player_connection.send(f"oppenents_name|{connected_clients[player_type].player_name}")
+            await connected_clients[player_type].player_connection.send(f"opponent|{connected_clients[player_type - 1].player_name}")
+            await connected_clients[player_type - 1].player_connection.send(f"opponent|{connected_clients[player_type].player_name}")
 
         if player_type == 0:
             await event.wait()
