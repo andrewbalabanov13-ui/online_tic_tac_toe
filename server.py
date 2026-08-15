@@ -93,6 +93,8 @@ def check_if_player_won(player_type):
     return False
 
 async def handler(connection):
+    global player_turn
+    
     my_id =  random.randint(0,2147483647)
     game_playing = False
     skip_first_lines = False
@@ -110,10 +112,9 @@ async def handler(connection):
         elif len(connected_clients) == 2:
             player_type = 1
             event.set()
- #           await connected_clients[player_type].player_connection.send(f"oppenents name is{connected_clients[player_type - 1].player_name}")
- #           await connected_clients[player_type - 1].player_connection.send(f"oppenents name is{connected_clients[player_type].player_name}")
+            await connected_clients[player_type].player_connection.send(f"oppenents_name|{connected_clients[player_type - 1].player_name}")
+            await connected_clients[player_type - 1].player_connection.send(f"oppenents_name|{connected_clients[player_type].player_name}")
 
-        await connection.send(f"opponent|{connected_clients[player_type - 1].player_name}")
         if player_type == 0:
             await event.wait()
         
@@ -123,7 +124,7 @@ async def handler(connection):
                 skip_first_lines = True
             else:
                 player_turn = 1
-                connection.send("start_game")
+                await connected_clients[player_type - 1].player_connection.send(f"relay|start_game")
             event.set()
         
         if readable_message[0] == "start_game":
@@ -143,11 +144,11 @@ async def handler(connection):
                 y = int(readable_message_turn[2])
 
                 if x < 0 or x > 20 or y < 0 or y > 20:
-                    connection.send("resend_message")
+                    await connection.send("resend_message")
                     
                 if world[y][x] != 'e':
                     skip_first_lines = True
-                    connection.send("resend_message")
+                    await connection.send("resend_message")
                     continue
                 
                 world[y][x] = str(player_turn)

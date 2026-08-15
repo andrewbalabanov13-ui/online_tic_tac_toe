@@ -16,7 +16,8 @@ as player names must not contain `|`.
 2. Send `start_client|<name>` as the first message.
 3. Wait for a second player to connect.
 4. Receive `opponent|<name>`.
-5. One player receives `start_game` and sends a move.
+5. server rolls to see who goes first, if its the second then it would send a relay message witch the client
+would relay the arguments to its own thread which would then start their turn.
 6. Both players receive `update` messages after accepted moves.
 7. Players alternate sending moves until the server sends `player_won`.
 
