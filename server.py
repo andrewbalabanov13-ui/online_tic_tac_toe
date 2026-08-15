@@ -7,7 +7,7 @@ new_positions = ()
 event = asyncio.Event()
 connected_clients = []
 player_turn = -1
-world = [['e'] * 10]* 10
+world = [['e'] * 20]* 20
 class Game():
     def __init__(self):
         self.board = [['e'] * 10]* 10
@@ -118,7 +118,7 @@ async def handler(connection):
             await event.wait()
         
         if player_type == 1:
-            if random.randint(1-2) == 1:
+            if random.randint(1,2) == 1:
                 player_turn = 0
                 skip_first_lines = True
             else:
@@ -126,7 +126,7 @@ async def handler(connection):
                 connection.send("start_game")
             event.set()
         
-        if readable_message == "start_game":
+        if readable_message[0] == "start_game":
             player_turn = 1
             skip_first_lines = True
 
@@ -145,13 +145,13 @@ async def handler(connection):
                 if x < 0 or x > 20 or y < 0 or y > 20:
                     connection.send("resend_message")
                     
-                world[y][x] = str(player_turn)
-
                 if world[y][x] != 'e':
                     skip_first_lines = True
                     connection.send("resend_message")
                     continue
-    
+                
+                world[y][x] = str(player_turn)
+
                 if check_if_player_won(player_type):
                     await connected_clients[player_type].player_connection.send(f"player_won|{player_type}")
                     await connected_clients[player_type - 1].player_connection.send(f"player_won|{player_type}")   
