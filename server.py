@@ -149,13 +149,9 @@ async def handler(connection):
             readable_message = await recieve_message(connection)
 
         if readable_message[0] == "P1_goes_first":
-            await all_games[game_id][oppenent_id].send(f"Ok Make_first_move")
+            await all_games[game_id][oppenent_id].send(f"make_first_move")
             skip_first_lines = False
 
-        if readable_message[0] == "Ok Make_first_move":
-            skip_first_lines = True
-            await connection.send("make_first_move")
-            readable_message = await recieve_message(connection)
 
 
         
