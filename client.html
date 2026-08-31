@@ -1,0 +1,103 @@
+<html>
+    <head>
+        <style>
+            .enter_queue{
+                color:black;
+                margin:1px;
+                background-color:lightgray;
+                background-size:2px;
+                border-width:2px;
+                border-style:solid;
+                border-color:black;
+                visibility:visible;
+            }
+
+            .tic-tac-toe {
+                display: grid;
+                grid-template-columns: repeat(20, 30px);
+                grid-template-rows: repeat(20, 30px);
+                gap: 2px;
+
+                position: relative;
+                left: 100px;
+                top: 50px;
+            }
+
+            .tic-tac-toe_item {
+                background-color: white;
+                height: 30px;
+                width: 30px;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                border: 2px solid black;
+                color: black;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <button class="enter_queue" type="button" onclick="EnterQueue()">Match with other player online</button>
+        
+        <div class="tic-tac-toe" id="tic-tac_grid"></div>
+
+        <!-- The Script that controls what happens -->
+        <script>
+        
+        // Create WebSocket connection.
+        const socket = new WebSocket("ws://localhost:8000");
+
+        const button = document.querySelector(".enter_queue")
+
+
+
+        // Connection opened
+        socket.addEventListener("open", (event) => {
+        });
+
+        // Listen for messages
+        socket.addEventListener("message", (event) => {
+            alert(event.data)
+            const readable_data = change_to_readable_format(event.data)
+            if (readable_data[0] == "relay"){
+                let sendable_data = readable_data
+                sendable_data.shift()
+                sendable_data = change_to_string(sendable_data)
+                socket.send(sendable_data)
+            }
+        });
+
+        const TicTacToeContainer = document.getElementById('tic-tac_grid')
+
+        for (let i = 1; i <= 400; i++) {
+        const item = document.createElement('div');
+        item.classList.add('tic-tac-toe_item');
+
+        item.addEventListener("click", function() {
+            alert("Index:" + String(i));
+        });
+
+        item.textContent = i;
+        TicTacToeContainer.appendChild(item);
+
+        }
+
+        function EnterQueue(){
+            alert("You clicked the button, and it actually did something?!");
+            button.style.visibility = "hidden";
+            socket.send("enter_queue|bob");
+        }
+
+        function change_to_readable_format(msg) {
+            return msg.split("|");
+        }
+
+        function change_to_string(arr) {
+            return arr.join("|");
+        }
+        
+        </script>
+    </body>
+</html>

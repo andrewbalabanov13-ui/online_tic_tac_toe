@@ -6,6 +6,7 @@ import traceback
 event = asyncio.Event()
 connected_clients = []
 all_games = {}
+all_messages = {}
 class Game():
     def __init__(self):
         self.board = [[['e'] * 20]* 20]
@@ -52,6 +53,9 @@ def get_into_queue(player_id,connection):
                 all_games[game_id][player_id]=connection
                 all_games[game_id]["world"] = [['e'] * 20 for _ in range(20)]
                 all_games[game_id]["turn"] = -1
+
+                all_messages[game_id][player_id] = ""
+
                 playing_game = "first_connection"
                 return (playing_game,game_id)
         game_id = generate_game(player_id,connection)
@@ -99,7 +103,20 @@ def check_win(game_id, x, y, player_type):
 
     return False
 
+def anticheat(game_id,x,y):
+    try:
+        if x > 20 or x < 0:
+            return True
+        if y > 20 or y < 0:
+            return True
+        if all_games[game_id]["world"][y][x] != 'e':
+            return True
+
+    except:
+        return True
+
 async def handler(connection):
+    print("client connected")
     my_id = generate_id()
     my_game_id = -1
     skip_first_lines = False
@@ -110,23 +127,26 @@ async def handler(connection):
     oppenent_id = -1
     try:
         readable_message = await recieve_message(connection) 
-        
+        print("recieved message")
+        print(readable_message)
         # player enters queue to join a game, either returns if they are p1 or p2
         if readable_message[0] == "enter_queue":
             playing_game,game_id = get_into_queue(my_id,connection)
+            print(game_id,playing_game)
             name = readable_message[1]
+        else:
+            print("errar")
         # message when p1 connects and waits for p2 to send a message
         if playing_game == "waiting_connection":
             player_turn = 1
             readable_message = await recieve_message(connection)
-
         # message when p2 connects to a game using enter_queue, and get the oppenent_id, then sends its own id to p1
         if playing_game == "first_connection":
             player_turn = 2
             for other_id, other_connection in all_games[game_id].items():
                 oppenent_id = other_id
                 break
-
+            
             await all_games[game_id][oppenent_id].send(f"relay|give_oppenent_info|{my_id}")
             readable_message = await recieve_message(connection)
         # p1 recieves the oppenent id, and then decides who goes first by sending a message back
@@ -142,7 +162,6 @@ async def handler(connection):
                 skip_first_lines = True
                 readable_message = await recieve_message(connection)
 
-
         if readable_message[0] == "P2_goes_first":
             skip_first_lines = True
             await connection.send("make_first_move")
@@ -151,9 +170,6 @@ async def handler(connection):
         if readable_message[0] == "P1_goes_first":
             await all_games[game_id][oppenent_id].send(f"make_first_move")
             skip_first_lines = False
-
-
-
         
         while True:
             if skip_first_lines == False:
@@ -163,11 +179,15 @@ async def handler(connection):
             skip_first_lines = False
             x = int(readable_message[1])
             y = int(readable_message[2])
+            if anticheat(game_id,x,y):
+                await connection.send("You Cheater :<")
+                await all_games[game_id][oppenent_id].send(f"you won :>")
+                raise Exception("Invalid Packet")
             new_world = all_games[game_id]["world"]
             new_world[y][x] = player_turn
             all_games[game_id]["world"]=new_world
             if check_win(game_id,x,y,player_turn):
-                await connection.send("you won :)")
+                await connection.send("you_won :)")
                 await all_games[game_id][oppenent_id].send(f"you lost :<")
             if all_games[game_id]["turn"] == 1:
                 all_games[game_id]["turn"] = 2
@@ -184,6 +204,7 @@ async def handler(connection):
 
     finally:
         print("smt happened idk what")
+        await connection.close()
 
     
 
